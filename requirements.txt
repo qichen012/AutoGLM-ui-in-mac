@@ -1,0 +1,44 @@
+# AutoGLM Cockpit 依赖项
+
+# ==================== 核心依赖 ====================
+# Qt GUI框架（需要Python 3.9，使用 6.6.3 避免 macOS 上的 cocoa 插件问题）
+PySide6==6.6.3
+
+# 手机投屏和控制
+# scrcpy Python客户端（从GitHub安装）
+git+https://github.com/leng-yue/py-scrcpy-client.git
+
+# ADB工具
+adbutils>=2.0.0
+
+# 图像处理
+# 使用 opencv-python-headless 避免与 PySide6 的库冲突
+# 使用 numpy<2 确保与 opencv 兼容
+numpy<2
+opencv-python-headless>=4.8.0
+Pillow>=12.0.0  # AutoGLM 需要较新版本
+
+# ==================== AI相关 ====================
+# 智谱AI GLM-4
+zhipuai>=2.0.0
+
+# OpenAI 兼容接口（AutoGLM需要）
+openai>=2.9.0
+
+# ==================== 工具库 ====================
+# 配置文件解析
+PyYAML>=6.0
+
+# HTTP客户端
+requests>=2.31.0
+
+# 日志和调试
+loguru>=0.7.0
+
+# ==================== AutoGLM依赖 ====================
+# 根据AutoGLM-phone项目的requirements.txt添加
+# 常见的可能包括：
+# anthropic
+# openai
+# Pillow
+# pydantic

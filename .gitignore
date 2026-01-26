@@ -1,0 +1,130 @@
+# ==================== Python ====================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+.venv39/
+venv/
+ENV/
+env/
+*.venv
+
+# ==================== IDE ====================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ==================== macOS ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ==================== 项目特定 ====================
+# 配置文件（包含敏感信息）
+config.yaml
+*.local.yaml
+.env
+.env.local
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
+
+# 缓存
+.cache/
+*.cache
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ==================== AI/ML ====================
+# 模型文件（如果有大模型）
+*.pth
+*.ckpt
+*.h5
+models/
+
+# 数据集
+data/
+datasets/
+
+# ==================== Qt ====================
+# Qt 用户配置
+*.pro.user
+*.pro.user.*
+
+# ==================== AutoGLM ====================
+# AutoGLM-phone 子项目的虚拟环境和缓存
+AutoGLM-phone/.venv/
+AutoGLM-phone/venv/
+AutoGLM-phone/__pycache__/
+AutoGLM-phone/**/__pycache__/
+AutoGLM-phone/**/*.pyc
+
+# ==================== 其他 ====================
+# 备份文件
+*.bak
+*.backup
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 截图和录屏（如果不需要提交）
+screenshots/
+recordings/
+
+# 用户特定的运行脚本
+run.local.sh
+*.local.sh
