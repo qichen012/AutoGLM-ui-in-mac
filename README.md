@@ -51,8 +51,8 @@ source .venv39/bin/activate
 # 升级pip
 python -m pip install --upgrade pip
 
-# 安装依赖（使用国内镜像）
-python -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 安装依赖（可使用国内镜像）
+python -m pip install -r requirements.txt 
 ```
 
 ### 4. 配置设备
