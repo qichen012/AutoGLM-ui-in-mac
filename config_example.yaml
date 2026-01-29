@@ -1,0 +1,25 @@
+# AutoGLM Cockpit 配置文件
+# 首次运行会自动生成到 ~/.autoglm-ui/config.yaml
+
+# ==================== 设备配置 ====================
+device:
+  ip: ""        # 手机IP地址（修改为你的设备IP）
+  adb_port:         # ADB无线调试端口
+
+# ==================== Scrcpy配置 ====================
+scrcpy:
+  max_width: 800          # 投屏最大宽度
+  max_fps: 30             # 最大帧率
+  bitrate: 2000000        # 比特率
+
+# ==================== AI配置 ====================
+ai:
+  chat_model: "glm-4"     # 对话模型
+  api_key: ""             # API密钥（请填写你的密钥）
+  max_history: 100        # 最大对话历史数
+
+# ==================== UI配置 ====================
+ui:
+  window_width: 1200      # 窗口宽度
+  window_height: 800      # 窗口高度
+  theme: "dark"           # 主题

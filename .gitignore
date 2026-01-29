@@ -35,7 +35,8 @@ venv/
 ENV/
 env/
 *.venv
-
+config
+config.yaml
 # ==================== IDE ====================
 # VSCode
 .vscode/
