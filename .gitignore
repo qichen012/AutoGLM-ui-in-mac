@@ -111,6 +111,10 @@ AutoGLM-phone/__pycache__/
 AutoGLM-phone/**/__pycache__/
 AutoGLM-phone/**/*.pyc
 
+# 本地运行脚本（含敏感信息），不上传到仓库
+AutoGLM-phone/run.sh
+AutoGLM-phone/run_accessibility.sh
+
 # ==================== 其他 ====================
 # 备份文件
 *.bak
@@ -128,3 +132,69 @@ recordings/
 # 用户特定的运行脚本
 run.local.sh
 *.local.sh
+run_*.sh
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+/tmp/
+screenshots/
+
+# Keep old files during transition
+call_model.py
+app_package_name.py
+
+.claude/
+.venv
+run_*.sh
