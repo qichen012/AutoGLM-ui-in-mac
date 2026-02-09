@@ -1,6 +1,6 @@
 """手机控制协调器 - 协调投屏显示和AI控制"""
 from typing import Optional, Dict, Any
-from PySide6.QtCore import QObject, Signal
+from PyQt5.QtCore import QObject, pyqtSignal as Signal
 
 
 class PhoneController(QObject):

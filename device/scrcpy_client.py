@@ -1,6 +1,6 @@
 """Scrcpy客户端 - 手机投屏与控制"""
-from PySide6.QtCore import QThread, Signal
-from PySide6.QtGui import QImage
+from PyQt5.QtCore import QThread, pyqtSignal as Signal
+from PyQt5.QtGui import QImage
 import numpy as np
 from PIL import Image
 

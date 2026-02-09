@@ -4,7 +4,7 @@ import threading
 import os
 from pathlib import Path
 from typing import Optional, Callable
-from PySide6.QtCore import QObject, Signal
+from PyQt5.QtCore import QObject, pyqtSignal as Signal
 
 
 class AutoGLMExecutor(QObject):

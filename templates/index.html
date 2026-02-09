@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGLM Cockpit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧：手机投屏 -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <h2>📱 手机投屏</h2>
+                <div class="connection-status">
+                    <span id="adb-status" class="status-dot offline"></span>
+                    <span id="device-info">未连接</span>
+                </div>
+            </div>
+            <div class="phone-screen">
+                <img id="screen-image" src="" alt="等待投屏..." />
+                <div id="screen-placeholder" class="placeholder">
+                    <p>📱</p>
+                    <p>等待投屏连接...</p>
+                    <button id="start-scrcpy-btn" class="btn-primary">启动投屏</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：AI 对话 -->
+        <div class="right-panel">
+            <div class="panel-header">
+                <h2>🤖 AI 助手</h2>
+                <div class="mode-switch">
+                    <button id="mode-normal" class="mode-btn active">A模式: 聊天</button>
+                    <button id="mode-autoglm" class="mode-btn">B模式: 控制</button>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div id="chat-messages" class="chat-messages"></div>
+                
+                <div class="chat-input-area">
+                    <textarea 
+                        id="user-input" 
+                        placeholder="输入消息... (Shift+Enter 换行, Enter 发送)"
+                        rows="3"
+                    ></textarea>
+                    <button id="send-btn" class="btn-send">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
