@@ -2,6 +2,10 @@
 AutoGLM Cockpit - Web 服务器
 基于 Flask + SocketIO 的 Web 界面
 """
+# Eventlet monkey patch（必须在最前面）
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 import base64
@@ -68,11 +72,11 @@ def index():
 @app.route('/api/status')
 def get_status():
     """获取系统状态"""
-    adb_connected = adb_manager.is_connected() if adb_manager else False
+    adb_connected = adb_manager.is_connected if adb_manager else False
     return jsonify({
         'adb_connected': adb_connected,
         'mode': current_mode,
-        'device': f"{config.get('device', {}).get('ip')}:{config.get('device', {}).get('port')}"
+        'device': f"{config.get('device', {}).get('ip')}:{config.get('device', {}).get('adb_port')}"
     })
 
 
@@ -121,34 +125,60 @@ def handle_message(data):
     # 先回显用户消息
     emit('user_message', {'message': message})
     
-    try:
-        if current_mode == 'normal':
-            # A 模式：普通聊天
-            response = ""
-            for chunk in normal_chat.chat_stream(message):
-                response += chunk
-                emit('ai_message_chunk', {'chunk': chunk})
-            emit('ai_message_complete', {'message': response})
-            
-        else:
-            # B 模式：AutoGLM 控制
-            emit('ai_message_chunk', {'chunk': f'🤖 开始执行任务: {message}\n'})
-            
-            result = autoglm_agent.execute_task(message)
-            
-            if result.get('success'):
-                final_msg = f"✅ 任务完成: {result.get('message', '')}"
+    def process_message():
+        """在独立线程中处理消息（避免 eventlet 冲突）"""
+        try:
+            if current_mode == 'normal':
+                # A 模式：普通聊天
+                response = ""
+                for chunk in normal_chat.stream_chat(message):
+                    response += chunk
+                    socketio.emit('ai_message_chunk', {'chunk': chunk})
+                socketio.emit('ai_message_complete', {'message': response})
+                
             else:
-                final_msg = f"❌ 任务失败: {result.get('error', '')}"
-            
-            emit('ai_message_chunk', {'chunk': final_msg})
-            emit('ai_message_complete', {'message': final_msg})
-            
-    except Exception as e:
-        logger.error(f"处理消息时出错: {e}")
-        import traceback
-        traceback.print_exc()
-        emit('error', {'message': f'处理失败: {str(e)}'})
+                # B 模式：AutoGLM 控制
+                socketio.emit('ai_message_chunk', {'chunk': f'🤖 开始执行任务: {message}\n'})
+                socketio.emit('autoglm_step', {'type': 'thinking', 'content': f'收到任务指令: {message}'})
+                
+                # 设置步骤回调，实时显示执行过程
+                def step_callback(step_info):
+                    # 判断步骤类型
+                    if '思考' in step_info or '🤔' in step_info:
+                        step_type = 'thinking'
+                    elif '执行' in step_info or '⚡' in step_info:
+                        step_type = 'action'
+                    elif '错误' in step_info or '❌' in step_info:
+                        step_type = 'error'
+                    else:
+                        step_type = 'result'
+                    
+                    socketio.emit('autoglm_step', {'type': step_type, 'content': step_info})
+                
+                autoglm_agent.set_step_callback(step_callback)
+                
+                result = autoglm_agent.execute_task(message)
+                
+                if result.get('success'):
+                    final_msg = f"✅ 任务完成: {result.get('message', '')}"
+                    socketio.emit('autoglm_step', {'type': 'result', 'content': result.get('message', '')})
+                else:
+                    final_msg = f"❌ 任务失败: {result.get('error', '')}"
+                    socketio.emit('autoglm_step', {'type': 'error', 'content': result.get('error', '')})
+                
+                socketio.emit('ai_message_chunk', {'chunk': final_msg})
+                socketio.emit('ai_message_complete', {'message': final_msg})
+                
+        except Exception as e:
+            logger.error(f"处理消息时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            socketio.emit('error', {'message': f'处理失败: {str(e)}'})
+    
+    # 在后台线程中处理（避免阻塞 eventlet）
+    import threading
+    thread = threading.Thread(target=process_message, daemon=True)
+    thread.start()
 
 
 @socketio.on('start_scrcpy')
@@ -170,55 +200,66 @@ def handle_start_scrcpy():
 
 
 def scrcpy_stream_worker():
-    """scrcpy 推流工作线程"""
+    """scrcpy 推流工作线程（使用 scrcpy 客户端实时视频流）"""
+    import time
+    import cv2
+    import numpy as np
+    
     try:
-        import subprocess
-        import cv2
-        import numpy as np
+        from scrcpy import Client
         
-        device = f"{config.get('device', {}).get('ip')}:{config.get('device', {}).get('port')}"
+        device = f"{config.get('device', {}).get('ip')}:{config.get('device', {}).get('adb_port')}"
+        logger.info(f"启动 scrcpy 实时推流，设备: {device}")
         
-        # 启动 scrcpy 输出到 stdout
-        cmd = [
-            'scrcpy',
-            '--serial', device,
-            '--max-size', '800',
-            '--video-codec', 'h264',
-            '--no-audio',
-            '--video-encoder', 'c2.android.avc.encoder',
-            '--record', '-',  # 输出到 stdout
-            '--no-window'
-        ]
+        # 创建 scrcpy 客户端（1080p分辨率 + 60fps + 高比特率）
+        client = Client(device=device, max_width=1080, bitrate=8000000, max_fps=60)
         
-        logger.info(f"启动 scrcpy: {' '.join(cmd)}")
+        # 启动客户端
+        logger.info("正在连接 scrcpy server...")
+        client.start(threaded=True)
         
-        # 这里简化处理：使用截图方式
-        # 完整的视频流需要解析 H264，较复杂
-        import time
-        while True:
+        # 等待连接
+        time.sleep(2)
+        
+        if not client.alive:
+            logger.error("scrcpy 客户端启动失败")
+            return
+        
+        logger.info("scrcpy 连接成功，开始推流")
+        frame_count = 0
+        
+        while client.alive:
             try:
-                # 使用 scrcpy-client 截图
-                from scrcpy import Client
-                client = Client(device=device, max_width=800)
-                client.start()
+                frame = client.last_frame
                 
-                while client.alive:
-                    frame = client.last_frame
-                    if frame is not None:
-                        # 转换为 JPEG base64
-                        _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                        jpg_base64 = base64.b64encode(buffer).decode('utf-8')
-                        
-                        socketio.emit('screen_frame', {'frame': jpg_base64})
+                if frame is not None:
+                    # JPEG 最高质量（质量100 + 无色度子采样）
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 100,
+                                    int(cv2.IMWRITE_JPEG_OPTIMIZE), 1,
+                                    int(cv2.IMWRITE_JPEG_PROGRESSIVE), 1]
+                    _, buffer = cv2.imencode('.jpg', frame, encode_param)
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
                     
-                    time.sleep(0.1)  # 10 FPS
+                    # 通过 WebSocket 推送
+                    socketio.emit('screen_frame', {'frame': img_base64})
                     
+                    frame_count += 1
+                    if frame_count % 100 == 0:
+                        logger.info(f"已推送 {frame_count} 帧")
+                
+                # 60 FPS（尽可能流畅）
+                time.sleep(1.0 / 60)
+                
             except Exception as e:
-                logger.error(f"scrcpy 推流错误: {e}")
-                time.sleep(2)
-                
+                logger.error(f"帧处理错误: {e}")
+                time.sleep(0.5)
+        
+        logger.info("scrcpy 客户端已停止")
+        
+    except ImportError:
+        logger.error("未安装 scrcpy 客户端库，请运行: pip install git+https://github.com/leng-yue/py-scrcpy-client.git")
     except Exception as e:
-        logger.error(f"scrcpy 工作线程错误: {e}")
+        logger.error(f"scrcpy 推流错误: {e}")
         import traceback
         traceback.print_exc()
 
@@ -244,7 +285,7 @@ def main():
     logger.info("=" * 60)
     logger.info("AutoGLM Cockpit Web 服务器启动")
     logger.info(f"访问地址: http://localhost:{port}")
-    logger.info(f"设备: {config.get('device', {}).get('ip')}:{config.get('device', {}).get('port')}")
+    logger.info(f"设备: {config.get('device', {}).get('ip')}:{config.get('device', {}).get('adb_port')}")
     logger.info("=" * 60)
     
     socketio.run(app, host=host, port=port, debug=True, use_reloader=False)

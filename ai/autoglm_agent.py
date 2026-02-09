@@ -40,14 +40,15 @@ class AutoGLMAgent:
             # 配置模型（从环境变量读取）
             model_config = ModelConfig(
                 base_url=os.getenv("PHONE_AGENT_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
-                model=os.getenv("PHONE_AGENT_MODEL", "autoglm-phone"),
+                model_name=os.getenv("PHONE_AGENT_MODEL", "autoglm-phone"),
                 api_key=os.getenv("PHONE_AGENT_API_KEY", "")
             )
             
-            # 配置Agent
+            # 配置Agent（device_id 格式: "ip:port"）
+            device_id = f"{self.device_ip}:{self.adb_port}"
             agent_config = AgentConfig(
                 max_steps=int(os.getenv("PHONE_AGENT_MAX_STEPS", "100")),
-                device_id=None,  # 使用默认设备
+                device_id=device_id,
                 lang="cn",
                 verbose=True
             )
@@ -59,7 +60,7 @@ class AutoGLMAgent:
             )
             
             print(f"[AutoGLMAgent] 初始化成功，设备: {self.device_ip}:{self.adb_port}")
-            print(f"[AutoGLMAgent] 模型: {model_config.model}")
+            print(f"[AutoGLMAgent] 模型: {model_config.model_name}")
             self._initialized = True
             return True
                 
@@ -86,13 +87,16 @@ class AutoGLMAgent:
             print(f"[AutoGLMAgent] 执行任务: {instruction}")
             
             if self._step_callback:
-                self._step_callback(f"🤖 开始执行: {instruction}")
+                self._step_callback(f"📱 正在获取手机屏幕状态...")
+            
+            if self._step_callback:
+                self._step_callback(f"🤖 调用AI模型分析任务: {instruction}")
             
             # 调用实际的AutoGLM执行逻辑
             message = self._phone_agent.run(instruction)
             
             if self._step_callback:
-                self._step_callback(f"✅ 完成: {message}")
+                self._step_callback(f"✅ 任务执行完成")
             
             result = {
                 'success': True,

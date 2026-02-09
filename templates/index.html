@@ -38,6 +38,7 @@
                 </div>
             </div>
             
+            <!-- 对话容器：在B模式下占上半部分 -->
             <div class="chat-container">
                 <div id="chat-messages" class="chat-messages"></div>
                 
@@ -49,6 +50,14 @@
                     ></textarea>
                     <button id="send-btn" class="btn-send">发送</button>
                 </div>
+            </div>
+            
+            <!-- AutoGLM执行过程容器：仅在B模式下显示 -->
+            <div id="autoglm-process" class="autoglm-process" style="display: none;">
+                <div class="process-header">
+                    <h3>🔄 执行过程</h3>
+                </div>
+                <div id="process-content" class="process-content"></div>
             </div>
         </div>
     </div>

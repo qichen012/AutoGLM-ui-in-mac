@@ -13,6 +13,9 @@ const screenPlaceholder = document.getElementById('screen-placeholder');
 const startScrcpyBtn = document.getElementById('start-scrcpy-btn');
 const adbStatus = document.getElementById('adb-status');
 const deviceInfo = document.getElementById('device-info');
+const rightPanel = document.querySelector('.right-panel');
+const autoglmProcess = document.getElementById('autoglm-process');
+const processContent = document.getElementById('process-content');
 
 // 连接事件
 socket.on('connect', () => {
@@ -57,10 +60,15 @@ function switchMode(mode) {
     if (mode === 'normal') {
         modeNormalBtn.classList.add('active');
         modeAutoglmBtn.classList.remove('active');
+        rightPanel.classList.remove('autoglm-mode');
+        autoglmProcess.style.display = 'none';
         addSystemMessage('🔄 切换到 A 模式：普通聊天');
     } else {
         modeNormalBtn.classList.remove('active');
         modeAutoglmBtn.classList.add('active');
+        rightPanel.classList.add('autoglm-mode');
+        autoglmProcess.style.display = 'flex';
+        processContent.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">等待执行任务...</div>';
         addSystemMessage('🔄 切换到 B 模式：手机控制');
     }
 }
@@ -178,7 +186,38 @@ socket.on('adb_status', (data) => {
         addSystemMessage('❌ ADB 连接失败');
     }
 });
+// AutoGLM 执行步骤
+socket.on('autoglm_step', (data) => {
+    addProcessStep(data.type, data.content);
+});
 
+function addProcessStep(type, content) {
+    const stepDiv = document.createElement('div');
+    stepDiv.className = `process-step ${type}`;
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'step-label';
+    
+    const typeLabels = {
+        'thinking': '🤔 思考中',
+        'action': '⚡ 执行操作',
+        'result': '✅ 执行结果',
+        'error': '❌ 错误'
+    };
+    
+    labelDiv.textContent = typeLabels[type] || '📝 步骤';
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'step-content';
+    contentDiv.textContent = content;
+    
+    stepDiv.appendChild(labelDiv);
+    stepDiv.appendChild(contentDiv);
+    processContent.appendChild(stepDiv);
+    
+    // 自动滚动到底部
+    processContent.scrollTop = processContent.scrollHeight;
+}
 // 初始化
 addSystemMessage('👋 欢迎使用 AutoGLM Cockpit');
 addSystemMessage('💡 提示：A 模式用于普通对话，B 模式用于控制手机');
