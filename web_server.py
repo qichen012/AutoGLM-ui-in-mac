@@ -48,22 +48,9 @@ class RealTimeOutputStream:
         self.socketio = socketio_instance
         self.original_stdout = original_stdout
         self.buffer = ""
-        self.current_block = ""
+        self.in_block = False
         self.current_block_type = None
         
-        # 定义块标识符
-        self.block_markers = {
-            '思考过程': 'thinking',
-            '性能指标': 'performance',
-            '执行动作': 'action',
-            '任务完成': 'finish',
-            '💭 思考过程': 'thinking',
-            '⏱️  性能指标': 'performance',
-            '🎯 执行动作': 'action',
-            '🎉 ': 'finish',
-            '✅ 任务完成': 'finish'
-        }
-    
     def write(self, text):
         """写入数据时同时输出到原始 stdout 并通过 socket 发送"""
         # 写入原始 stdout（保持终端输出）
@@ -73,48 +60,53 @@ class RealTimeOutputStream:
         # 累积到缓冲区
         self.buffer += text
         
-        # 检查是否遇到新的块标记
-        for marker, block_type in self.block_markers.items():
-            if marker in self.buffer:
-                # 发送之前积累的块
-                if self.current_block.strip():
-                    self._send_block()
-                
-                # 开始新块
-                self.current_block = self.buffer
-                self.current_block_type = block_type
-                self.buffer = ""
-                return
+        # 检查是否包含块标记
+        if '💭 思考过程:' in self.buffer or '思考过程:' in self.buffer:
+            self.in_block = True
+            self.current_block_type = 'thinking'
+        elif '⏱️  性能指标:' in self.buffer or '性能指标:' in self.buffer:
+            # 发送之前的块（思考过程）
+            if self.in_block:
+                self._send_complete_block()
+            self.in_block = True
+            self.current_block_type = 'performance'
+        elif '🎯 执行动作:' in self.buffer or 'Parsing action:' in self.buffer:
+            # 发送之前的块
+            if self.in_block:
+                self._send_complete_block()
+            self.in_block = True
+            self.current_block_type = 'action'
+        elif '🎉 ' in self.buffer and '任务完成' in self.buffer:
+            # 发送之前的块
+            if self.in_block:
+                self._send_complete_block()
+            self.in_block = True
+            self.current_block_type = 'finish'
         
-        # 如果遇到分隔线且有当前块，发送当前块
-        if ('====' in self.buffer or '----' in self.buffer) and self.current_block:
-            self.current_block += self.buffer
-            self.buffer = ""
-            
-            # 如果分隔线重复出现（块结束），发送这个块
-            if self.current_block.count('====') >= 2 or self.current_block.count('----') >= 2:
-                self._send_block()
-        else:
-            # 继续积累到当前块
-            self.current_block += self.buffer
-            self.buffer = ""
+        # 如果在块中，检查是否遇到下一个分隔线（块结束）
+        if self.in_block and '==================================================' in self.buffer:
+            # 计算分隔线数量，如果>=2说明块结束
+            separator_count = self.buffer.count('==================================================')
+            if separator_count >= 2:
+                self._send_complete_block()
     
-    def _send_block(self):
+    def _send_complete_block(self):
         """发送一个完整的块"""
-        if self.current_block.strip():
+        if self.buffer.strip():
             self.socketio.emit('autoglm_realtime_log', {
-                'content': self.current_block,
+                'content': self.buffer,
                 'type': self.current_block_type or 'general'
             })
-            self.current_block = ""
+            self.buffer = ""
+            self.in_block = False
             self.current_block_type = None
     
     def flush(self):
         """刷新缓冲区"""
         self.original_stdout.flush()
         # 发送剩余的块
-        if self.current_block.strip() or self.buffer.strip():
-            self._send_block()
+        if self.buffer.strip():
+            self._send_complete_block()
 
 
 def init_services():
