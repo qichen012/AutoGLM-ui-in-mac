@@ -10,6 +10,8 @@ import os
 import sys
 import base64
 import threading
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
@@ -38,6 +40,28 @@ normal_chat = None
 autoglm_agent = None
 scrcpy_thread = None
 current_mode = "normal"  # normal 或 autoglm
+
+
+class RealTimeOutputStream:
+    """实时输出流捕获器，用于捕获 AutoGLM 的终端输出"""
+    def __init__(self, socketio_instance, original_stdout):
+        self.socketio = socketio_instance
+        self.original_stdout = original_stdout
+        self.buffer = ""
+    
+    def write(self, text):
+        """写入数据时同时输出到原始 stdout 并通过 socket 发送"""
+        # 写入原始 stdout（保持终端输出）
+        self.original_stdout.write(text)
+        self.original_stdout.flush()
+        
+        # 通过 socket 实时发送
+        if text and text.strip():
+            self.socketio.emit('autoglm_realtime_log', {'content': text})
+    
+    def flush(self):
+        """刷新缓冲区"""
+        self.original_stdout.flush()
 
 
 def init_services():
@@ -141,27 +165,42 @@ def handle_message(data):
                 socketio.emit('ai_message_chunk', {'chunk': f'🤖 开始执行任务: {message}\n'})
                 socketio.emit('autoglm_step', {'type': 'thinking', 'content': f'收到任务指令: {message}'})
                 
-                # 设置步骤回调，实时显示执行过程
-                def step_callback(step_info):
-                    # 判断步骤类型
-                    if '思考' in step_info or '🤔' in step_info:
-                        step_type = 'thinking'
-                    elif '执行' in step_info or '⚡' in step_info:
-                        step_type = 'action'
-                    elif '错误' in step_info or '❌' in step_info:
-                        step_type = 'error'
-                    else:
-                        step_type = 'result'
+                # 保存原始 stdout
+                original_stdout = sys.stdout
+                
+                try:
+                    # 创建实时输出捕获器
+                    realtime_stream = RealTimeOutputStream(socketio, original_stdout)
                     
-                    socketio.emit('autoglm_step', {'type': step_type, 'content': step_info})
-                
-                autoglm_agent.set_step_callback(step_callback)
-                
-                result = autoglm_agent.execute_task(message)
+                    # 重定向 stdout 到我们的捕获器
+                    sys.stdout = realtime_stream
+                    
+                    # 设置步骤回调，实时显示执行过程
+                    def step_callback(step_info):
+                        # 判断步骤类型
+                        if '思考' in step_info or '🤔' in step_info:
+                            step_type = 'thinking'
+                        elif '执行' in step_info or '⚡' in step_info:
+                            step_type = 'action'
+                        elif '错误' in step_info or '❌' in step_info:
+                            step_type = 'error'
+                        else:
+                            step_type = 'result'
+                        
+                        socketio.emit('autoglm_step', {'type': step_type, 'content': step_info})
+                    
+                    autoglm_agent.set_step_callback(step_callback)
+                    
+                    # 执行任务（这里的所有 print 输出都会被捕获并实时发送）
+                    result = autoglm_agent.execute_task(message)
+                    
+                finally:
+                    # 恢复原始 stdout
+                    sys.stdout = original_stdout
                 
                 if result.get('success'):
                     final_msg = f"✅ 任务完成: {result.get('message', '')}"
-                    socketio.emit('autoglm_step', {'type': 'result', 'content': result.get('message', '')})
+                    socketio.emit('autoglm_step', {'type': 'finish', 'content': result.get('message', '')})
                 else:
                     final_msg = f"❌ 任务失败: {result.get('error', '')}"
                     socketio.emit('autoglm_step', {'type': 'error', 'content': result.get('error', '')})

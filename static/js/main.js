@@ -68,7 +68,15 @@ function switchMode(mode) {
         modeAutoglmBtn.classList.add('active');
         rightPanel.classList.add('autoglm-mode');
         autoglmProcess.style.display = 'flex';
-        processContent.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">等待执行任务...</div>';
+        
+        // 清空左右两侧内容
+        if (summaryContent) {
+            summaryContent.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 20px;">等待执行任务...</div>';
+        }
+        if (detailsContent) {
+            detailsContent.innerHTML = '<div style="color: #64748b; text-align: center; padding: 20px;">📡 等待实时日志输出...</div>';
+        }
+        
         addSystemMessage('🔄 切换到 B 模式：手机控制');
     }
 }
@@ -186,38 +194,166 @@ socket.on('adb_status', (data) => {
         addSystemMessage('❌ ADB 连接失败');
     }
 });
+// 获取新的DOM元素
+const summaryContent = document.getElementById('summary-content');
+const detailsContent = document.getElementById('details-content');
+
 // AutoGLM 执行步骤
 socket.on('autoglm_step', (data) => {
     addProcessStep(data.type, data.content);
 });
 
 function addProcessStep(type, content) {
-    const stepDiv = document.createElement('div');
-    stepDiv.className = `process-step ${type}`;
+    // 添加到总结区域（左侧）
+    addSummaryItem(type, content);
     
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'step-label';
+    // 添加到详细日志区域（右侧）
+    addDetailLog(type, content);
+}
+
+// 添加总结项（左侧简洁版）
+function addSummaryItem(type, content) {
+    const summaryItem = document.createElement('div');
+    summaryItem.className = `summary-item ${type}`;
+    
+    const typeDiv = document.createElement('div');
+    typeDiv.className = 'item-type';
     
     const typeLabels = {
         'thinking': '🤔 思考中',
         'action': '⚡ 执行操作',
         'result': '✅ 执行结果',
+        'finish': '🎉 任务完成',
         'error': '❌ 错误'
     };
     
-    labelDiv.textContent = typeLabels[type] || '📝 步骤';
+    typeDiv.textContent = typeLabels[type] || '📝 步骤';
     
     const contentDiv = document.createElement('div');
-    contentDiv.className = 'step-content';
-    contentDiv.textContent = content;
+    contentDiv.className = 'item-content';
     
-    stepDiv.appendChild(labelDiv);
-    stepDiv.appendChild(contentDiv);
-    processContent.appendChild(stepDiv);
+    // 对于总结区域，只显示关键信息（截断长文本）
+    const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+    contentDiv.textContent = shortContent;
+    
+    summaryItem.appendChild(typeDiv);
+    summaryItem.appendChild(contentDiv);
+    summaryContent.appendChild(summaryItem);
     
     // 自动滚动到底部
-    processContent.scrollTop = processContent.scrollHeight;
+    summaryContent.scrollTop = summaryContent.scrollHeight;
 }
+
+// 添加详细日志（右侧详细版）
+function addDetailLog(type, content) {
+    // 检查是否包含性能指标
+    if (content.includes('性能指标') || content.includes('TTFT') || content.includes('延迟')) {
+        addPerformanceMetrics(content);
+        return;
+    }
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry ${type}`;
+    
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'log-time';
+    const now = new Date();
+    timeDiv.textContent = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'log-content';
+    contentDiv.textContent = content;
+    
+    logEntry.appendChild(timeDiv);
+    logEntry.appendChild(contentDiv);
+    detailsContent.appendChild(logEntry);
+    
+    // 自动滚动到底部
+    detailsContent.scrollTop = detailsContent.scrollHeight;
+}
+
+// 添加性能指标（特殊样式）
+function addPerformanceMetrics(content) {
+    const perfDiv = document.createElement('div');
+    perfDiv.className = 'perf-metrics';
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'metric-title';
+    titleDiv.textContent = '⏱️ 性能指标';
+    
+    perfDiv.appendChild(titleDiv);
+    
+    // 解析性能指标
+    const lines = content.split('\n');
+    lines.forEach(line => {
+        if (line.trim() && !line.includes('===') && !line.includes('性能指标')) {
+            const metricDiv = document.createElement('div');
+            metricDiv.className = 'metric-item';
+            
+            // 高亮数值部分
+            const match = line.match(/([\d.]+[ms|s])/g);
+            if (match) {
+                const parts = line.split(match[0]);
+                metricDiv.innerHTML = parts[0] + `<span class="metric-value">${match[0]}</span>` + (parts[1] || '');
+            } else {
+                metricDiv.textContent = line;
+            }
+            
+            perfDiv.appendChild(metricDiv);
+        }
+    });
+    
+    detailsContent.appendChild(perfDiv);
+    detailsContent.scrollTop = detailsContent.scrollHeight;
+}
+// 监听 AutoGLM 实时日志输出
+socket.on('autoglm_realtime_log', (data) => {
+    addRealtimeLog(data.content);
+});
+
+// 添加实时日志到详细日志区域
+function addRealtimeLog(content) {
+    if (!content || !content.trim()) return;
+    
+    // 如果是分隔线，添加视觉分隔符
+    if (content.includes('====') || content.includes('----')) {
+        const separator = document.createElement('div');
+        separator.className = 'log-separator';
+        detailsContent.appendChild(separator);
+        // 自动滚动
+        detailsContent.scrollTop = detailsContent.scrollHeight;
+        return;
+    }
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry';
+    
+    // 根据内容判断类型并高亮
+    if (content.includes('性能指标') || content.includes('TTFT') || content.includes('延迟') || content.includes('⏱️')) {
+        logEntry.classList.add('performance');
+    } else if (content.includes('思考过程') || content.includes('思考') || content.includes('💭')) {
+        logEntry.classList.add('thinking');
+    } else if (content.includes('执行动作') || content.includes('动作') || content.includes('🎯') || content.includes('Parsing action')) {
+        logEntry.classList.add('action');
+    }
+    
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'log-time';
+    const now = new Date();
+    timeDiv.textContent = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'log-content';
+    contentDiv.textContent = content;
+    
+    logEntry.appendChild(timeDiv);
+    logEntry.appendChild(contentDiv);
+    detailsContent.appendChild(logEntry);
+    
+    // 自动滚动到底部
+    detailsContent.scrollTop = detailsContent.scrollHeight;
+}
+
 // 初始化
 addSystemMessage('👋 欢迎使用 AutoGLM Cockpit');
 addSystemMessage('💡 提示：A 模式用于普通对话，B 模式用于控制手机');
