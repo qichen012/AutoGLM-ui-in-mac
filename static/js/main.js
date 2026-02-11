@@ -308,33 +308,30 @@ function addPerformanceMetrics(content) {
 }
 // 监听 AutoGLM 实时日志输出
 socket.on('autoglm_realtime_log', (data) => {
-    addRealtimeLog(data.content);
+    addRealtimeLogBlock(data.content, data.type);
 });
 
-// 添加实时日志到详细日志区域
-function addRealtimeLog(content) {
+// 添加实时日志块到详细日志区域
+function addRealtimeLogBlock(content, blockType) {
     if (!content || !content.trim()) return;
     
-    // 如果是分隔线，添加视觉分隔符
-    if (content.includes('====') || content.includes('----')) {
-        const separator = document.createElement('div');
-        separator.className = 'log-separator';
-        detailsContent.appendChild(separator);
-        // 自动滚动
-        detailsContent.scrollTop = detailsContent.scrollHeight;
+    // 如果是分隔线，跳过
+    if (content.trim().match(/^[=\-]+$/)) {
         return;
     }
     
-    const logEntry = document.createElement('div');
-    logEntry.className = 'log-entry';
+    const logBlock = document.createElement('div');
+    logBlock.className = 'log-block';
     
-    // 根据内容判断类型并高亮
-    if (content.includes('性能指标') || content.includes('TTFT') || content.includes('延迟') || content.includes('⏱️')) {
-        logEntry.classList.add('performance');
-    } else if (content.includes('思考过程') || content.includes('思考') || content.includes('💭')) {
-        logEntry.classList.add('thinking');
-    } else if (content.includes('执行动作') || content.includes('动作') || content.includes('🎯') || content.includes('Parsing action')) {
-        logEntry.classList.add('action');
+    // 根据块类型设置样式
+    if (blockType === 'thinking') {
+        logBlock.classList.add('thinking');
+    } else if (blockType === 'performance') {
+        logBlock.classList.add('performance');
+    } else if (blockType === 'action') {
+        logBlock.classList.add('action');
+    } else if (blockType === 'finish') {
+        logBlock.classList.add('finish');
     }
     
     const timeDiv = document.createElement('div');
@@ -346,9 +343,9 @@ function addRealtimeLog(content) {
     contentDiv.className = 'log-content';
     contentDiv.textContent = content;
     
-    logEntry.appendChild(timeDiv);
-    logEntry.appendChild(contentDiv);
-    detailsContent.appendChild(logEntry);
+    logBlock.appendChild(timeDiv);
+    logBlock.appendChild(contentDiv);
+    detailsContent.appendChild(logBlock);
     
     // 自动滚动到底部
     detailsContent.scrollTop = detailsContent.scrollHeight;

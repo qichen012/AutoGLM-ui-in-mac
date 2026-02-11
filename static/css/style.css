@@ -325,7 +325,59 @@ body {
     line-height: 1.4;
 }
 
-/* 详细日志样式 */
+/* 详细日志块样式 */
+.log-block {
+    margin-bottom: 8px;
+    padding: 10px;
+    background: #0f172a;
+    border-left: 3px solid #475569;
+    border-radius: 4px;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.log-block:hover {
+    background: #1e293b;
+    transform: translateX(2px);
+}
+
+.log-block.thinking {
+    border-left-color: #fbbf24;
+    background: linear-gradient(90deg, #1e1a0d 0%, #0f172a 100%);
+}
+
+.log-block.performance {
+    border-left-color: #22d3ee;
+    background: linear-gradient(90deg, #0c1222 0%, #0f172a 100%);
+}
+
+.log-block.action {
+    border-left-color: #34d399;
+    background: linear-gradient(90deg, #0d1e18 0%, #0f172a 100%);
+}
+
+.log-block.finish {
+    border-left-color: #a78bfa;
+    background: linear-gradient(90deg, #1a1527 0%, #0f172a 100%);
+}
+
+.log-block .log-time {
+    color: #64748b;
+    font-size: 10px;
+    margin-bottom: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-weight: 600;
+}
+
+.log-block .log-content {
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 保留旧的 log-entry 样式以兼容 */
 .log-entry {
     margin-bottom: 1px;
     padding: 6px 10px;
