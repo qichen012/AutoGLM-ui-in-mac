@@ -325,6 +325,58 @@ body {
     line-height: 1.4;
 }
 
+/* 详细日志行样式（终端风格） */
+.log-line {
+    padding: 3px 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #cbd5e1;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border-left: 2px solid transparent;
+    transition: all 0.1s;
+}
+
+.log-line:hover {
+    background: #1e293b;
+}
+
+/* 不同类型的行高亮 */
+.log-line.thinking {
+    color: #fbbf24;
+    border-left-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.05);
+    font-weight: 600;
+}
+
+.log-line.performance {
+    color: #22d3ee;
+    border-left-color: #22d3ee;
+    background: rgba(34, 211, 238, 0.05);
+    font-weight: 600;
+}
+
+.log-line.action {
+    color: #34d399;
+    border-left-color: #34d399;
+    background: rgba(52, 211, 153, 0.05);
+    font-weight: 600;
+}
+
+.log-line.finish {
+    color: #a78bfa;
+    border-left-color: #a78bfa;
+    background: rgba(167, 139, 250, 0.05);
+    font-weight: 600;
+}
+
+.log-line.separator {
+    color: #475569;
+    border: none;
+    padding: 1px 0;
+}
+
 /* 详细日志块样式 */
 .log-block {
     margin-bottom: 8px;

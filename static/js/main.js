@@ -307,48 +307,71 @@ function addPerformanceMetrics(content) {
     detailsContent.scrollTop = detailsContent.scrollHeight;
 }
 // 监听 AutoGLM 实时日志输出
+let currentLogLine = null;
+
 socket.on('autoglm_realtime_log', (data) => {
-    addRealtimeLogBlock(data.content, data.type);
+    addRealtimeLogStream(data.content);
 });
 
-// 添加实时日志块到详细日志区域
-function addRealtimeLogBlock(content, blockType) {
-    if (!content || !content.trim()) return;
+// 添加实时日志流到详细日志区域（流式追加，类似终端）
+function addRealtimeLogStream(content) {
+    if (!content) return;
     
-    // 如果是分隔线，跳过
-    if (content.trim().match(/^[=\-]+$/)) {
-        return;
+    // 如果遇到换行符，处理多行
+    const parts = content.split('\n');
+    
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        
+        // 如果是最后一部分且不是换行结尾，追加到当前行
+        if (i === parts.length - 1 && !content.endsWith('\n')) {
+            if (!currentLogLine) {
+                currentLogLine = createNewLogLine();
+            }
+            currentLogLine.textContent += part;
+            updateLogLineStyle(currentLogLine);
+        } else {
+            // 完成当前行或创建新行
+            if (!currentLogLine) {
+                currentLogLine = createNewLogLine();
+            }
+            currentLogLine.textContent += part;
+            updateLogLineStyle(currentLogLine);
+            currentLogLine = null; // 换行，下次创建新行
+        }
     }
-    
-    const logBlock = document.createElement('div');
-    logBlock.className = 'log-block';
-    
-    // 根据块类型设置样式
-    if (blockType === 'thinking') {
-        logBlock.classList.add('thinking');
-    } else if (blockType === 'performance') {
-        logBlock.classList.add('performance');
-    } else if (blockType === 'action') {
-        logBlock.classList.add('action');
-    } else if (blockType === 'finish') {
-        logBlock.classList.add('finish');
-    }
-    
-    const timeDiv = document.createElement('div');
-    timeDiv.className = 'log-time';
-    const now = new Date();
-    timeDiv.textContent = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
-    
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'log-content';
-    contentDiv.textContent = content;
-    
-    logBlock.appendChild(timeDiv);
-    logBlock.appendChild(contentDiv);
-    detailsContent.appendChild(logBlock);
     
     // 自动滚动到底部
     detailsContent.scrollTop = detailsContent.scrollHeight;
+}
+
+// 创建新的日志行
+function createNewLogLine() {
+    const logLine = document.createElement('div');
+    logLine.className = 'log-line';
+    detailsContent.appendChild(logLine);
+    return logLine;
+}
+
+// 根据内容更新日志行样式
+function updateLogLineStyle(logLine) {
+    const content = logLine.textContent;
+    
+    // 移除之前的类型类
+    logLine.classList.remove('thinking', 'performance', 'action', 'finish', 'separator');
+    
+    // 根据内容自动识别类型并高亮
+    if (content.includes('💭') || content.includes('思考过程')) {
+        logLine.classList.add('thinking');
+    } else if (content.includes('⏱️') || content.includes('性能指标') || content.includes('TTFT') || content.includes('延迟')) {
+        logLine.classList.add('performance');
+    } else if (content.includes('🎯') || content.includes('执行动作') || content.includes('Parsing action')) {
+        logLine.classList.add('action');
+    } else if (content.includes('🎉') || content.includes('✅') || content.includes('任务完成')) {
+        logLine.classList.add('finish');
+    } else if (content.includes('====') || content.includes('----')) {
+        logLine.classList.add('separator');
+    }
 }
 
 // 初始化

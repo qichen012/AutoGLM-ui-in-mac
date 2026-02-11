@@ -47,9 +47,6 @@ class RealTimeOutputStream:
     def __init__(self, socketio_instance, original_stdout):
         self.socketio = socketio_instance
         self.original_stdout = original_stdout
-        self.buffer = ""
-        self.in_block = False
-        self.current_block_type = None
         
     def write(self, text):
         """写入数据时同时输出到原始 stdout 并通过 socket 发送"""
@@ -57,56 +54,13 @@ class RealTimeOutputStream:
         self.original_stdout.write(text)
         self.original_stdout.flush()
         
-        # 累积到缓冲区
-        self.buffer += text
-        
-        # 检查是否包含块标记
-        if '💭 思考过程:' in self.buffer or '思考过程:' in self.buffer:
-            self.in_block = True
-            self.current_block_type = 'thinking'
-        elif '⏱️  性能指标:' in self.buffer or '性能指标:' in self.buffer:
-            # 发送之前的块（思考过程）
-            if self.in_block:
-                self._send_complete_block()
-            self.in_block = True
-            self.current_block_type = 'performance'
-        elif '🎯 执行动作:' in self.buffer or 'Parsing action:' in self.buffer:
-            # 发送之前的块
-            if self.in_block:
-                self._send_complete_block()
-            self.in_block = True
-            self.current_block_type = 'action'
-        elif '🎉 ' in self.buffer and '任务完成' in self.buffer:
-            # 发送之前的块
-            if self.in_block:
-                self._send_complete_block()
-            self.in_block = True
-            self.current_block_type = 'finish'
-        
-        # 如果在块中，检查是否遇到下一个分隔线（块结束）
-        if self.in_block and '==================================================' in self.buffer:
-            # 计算分隔线数量，如果>=2说明块结束
-            separator_count = self.buffer.count('==================================================')
-            if separator_count >= 2:
-                self._send_complete_block()
-    
-    def _send_complete_block(self):
-        """发送一个完整的块"""
-        if self.buffer.strip():
-            self.socketio.emit('autoglm_realtime_log', {
-                'content': self.buffer,
-                'type': self.current_block_type or 'general'
-            })
-            self.buffer = ""
-            self.in_block = False
-            self.current_block_type = None
+        # 实时发送每个 token，前端负责追加
+        if text:
+            self.socketio.emit('autoglm_realtime_log', {'content': text})
     
     def flush(self):
         """刷新缓冲区"""
         self.original_stdout.flush()
-        # 发送剩余的块
-        if self.buffer.strip():
-            self._send_complete_block()
 
 
 def init_services():
