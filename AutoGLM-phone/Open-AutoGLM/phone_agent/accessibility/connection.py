@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 # 从 .env 文件加载配置
 load_dotenv()
-DEFAULT_PHONE_IP = os.getenv("device_ip", "10.29.8.38")
+DEFAULT_PHONE_IP = os.getenv("device_ip", "192.168.2.10")
 DEFAULT_PORT = 8080
 
 class ConnectionType(Enum):
@@ -38,6 +38,16 @@ class ADBConnection:
         # adb_path 参数在这里没用，但为了兼容必须留着
         self.current_ip = DEFAULT_PHONE_IP
         self.port = DEFAULT_PORT
+    
+    @staticmethod
+    def _parse_device_ip(device_id: str | None) -> str:
+        """从 device_id 中提取 IP 地址（去除端口号）。"""
+        if not device_id:
+            return DEFAULT_PHONE_IP
+        # 如果 device_id 包含端口（格式: ip:port），只取 IP 部分
+        if ':' in device_id:
+            return device_id.split(':')[0]
+        return device_id
 
     def _get_base_url(self, ip: str = None):
         target = ip if ip else self.current_ip

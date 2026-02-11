@@ -12,7 +12,7 @@ from PIL import Image
 
 # 从 .env 文件加载配置
 load_dotenv()
-PHONE_IP = os.getenv("device_ip", "10.29.227.28")
+PHONE_IP = os.getenv("device_ip", "192.168.2.10")
 BASE_URL = f"http://{PHONE_IP}:8080"
 
 @dataclass
@@ -23,16 +23,24 @@ class Screenshot:
     height: int
     is_sensitive: bool = False
 
+def _parse_device_ip(device_id: str | None) -> str:
+    """从 device_id 中提取 IP 地址（去除端口号）。"""
+    if not device_id:
+        return PHONE_IP
+    # 如果 device_id 包含端口（格式: ip:port），只取 IP 部分
+    if ':' in device_id:
+        return device_id.split(':')[0]
+    return device_id
+
 def get_screenshot(device_id: str | None = None, timeout: int = 10) -> Screenshot:
     """
     Capture a screenshot from the Accessibility Service App via HTTP.
     
     Args:
-        device_id: In HTTP mode, this is treated as the IP address (optional).
-                   If provided, it overrides the default PHONE_IP.
+        device_id: 设备标识，格式可以是 'ip' 或 'ip:port'，会自动提取 IP 部分。
     """
-    # 如果调用方传了 device_id (IP)，就用传进来的，否则用默认的
-    target_ip = device_id if device_id else PHONE_IP
+    # 解析 device_id，只取 IP 部分
+    target_ip = _parse_device_ip(device_id)
     target_url = f"http://{target_ip}:8080/screenshot"
 
     try:

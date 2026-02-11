@@ -36,6 +36,11 @@ class AutoGLMAgent:
             from phone_agent import PhoneAgent
             from phone_agent.model import ModelConfig
             from phone_agent.agent import AgentConfig
+            from phone_agent.device_factory import set_device_type, DeviceType
+            
+            # 设置使用 Accessibility 方法
+            set_device_type(DeviceType.ACCESSIBILITY)
+            print(f"[AutoGLMAgent] 使用 Accessibility 方法连接设备")
             
             # 配置模型（从环境变量读取）
             model_config = ModelConfig(

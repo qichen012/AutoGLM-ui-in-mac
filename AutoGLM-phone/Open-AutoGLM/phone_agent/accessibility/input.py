@@ -6,9 +6,18 @@ from dotenv import load_dotenv
 
 # 从 .env 文件加载配置
 load_dotenv()
-DEVICE_IP = os.getenv("device_ip", "10.29.227.28")
+DEVICE_IP = os.getenv("device_ip", "192.168.2.10")
 
 PORT = 8080
+
+def _parse_device_ip(device_id: str | None) -> str:
+    """从 device_id 中提取 IP 地址（去除端口号）。"""
+    if not device_id:
+        return DEVICE_IP
+    # 如果 device_id 包含端口（格式: ip:port），只取 IP 部分
+    if ':' in device_id:
+        return device_id.split(':')[0]
+    return device_id
 
 def type_text(text: str, device_ip: str = DEVICE_IP, timeout: int = 5) -> bool:
     """

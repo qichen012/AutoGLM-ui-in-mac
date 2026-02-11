@@ -89,16 +89,19 @@
 │  │ scrcpy Client│  │ Normal Chat  │  │ Phone Agent  │      │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
 │         │                 │                  │               │
+│         │ ADB             │ HTTPS            │ HTTP:8080     │
 │         │                 │                  │               │
 │  ┌──────▼─────────────────▼──────────────────▼──────┐       │
-│  │          ADB Manager (设备控制层)                 │       │
+│  │      设备控制层 - Accessibility Service          │       │
 │  └──────────────────────┬───────────────────────────┘       │
 └─────────────────────────┼─────────────────────────────────────┘
-                          │ ADB over TCP
+                          │ ADB (投屏) + HTTP (控制)
                           │
               ┌───────────▼───────────┐
               │   Android 手机设备     │
-              │   192.168.2.13:34333  │
+              │  • ADB: 投屏视频流     │
+              │  • HTTP:8080 控制接口 │
+              │   192.168.2.10       │
               └───────────────────────┘
 ```
 
@@ -121,15 +124,22 @@
            → 浏览器显示
    ```
 
-3. **B模式控制流程**
+3. **B模式控制流程** ⭐ 使用 Accessibility Service
    ```
    用户指令 → AutoGLM Agent 
-           → ADB 截图 
+           → HTTP 请求截图 (port:8080)
            → GLM 视觉分析 
-           → 生成操作 
-           → ADB 执行 
+           → 生成操作指令
+           → HTTP 发送操作 (port:8080)
+           → Accessibility Service 执行
            → 反馈结果
    ```
+
+   **Accessibility 优势**：
+   - ✅ 支持文本输入（包括中文）
+   - ✅ 更稳定的点击和滑动
+   - ✅ 无需 ADB 键盘
+   - ✅ 原生无障碍服务支持
 
 ---
 
@@ -147,7 +157,10 @@
 
 - Android 5.0+ (推荐 Android 11+)
 - 开启开发者选项 + USB 调试
-- 支持无线调试（Android 11+ 推荐）
+- 支持无线调试（用于 scrcpy 投屏）
+- **安装 Accessibility Service 应用**（B模式控制必需）
+  - 用于接收控制指令（HTTP 端口 8080）
+  - 执行点击、滑动、输入等操作
 
 ---
 
@@ -194,25 +207,36 @@ cd ../..
 
 ### 4️⃣ 配置文件
 
-编辑 `config.yaml`：
+#### 主配置文件 `config.yaml`
 
 ```yaml
 device:
-  ip: "192.168.2.13"          # 手机的 IP 地址
-  adb_port: 34333             # ADB 无线调试端口
+  ip: "192.168.2.10"          # 手机的 IP 地址
+  adb_port: 35405             # ADB 无线调试端口（用于 scrcpy 投屏）
 
 ai:
   api_key: "your-api-key"     # 智谱 GLM API 密钥
   model: "glm-4"              # 模型名称
 ```
 
+#### Accessibility 配置 `.env` 文件
+
+在 `AutoGLM-phone/Open-AutoGLM/` 目录下创建 `.env` 文件：
+
+```bash
+# Accessibility Service 配置
+device_ip="192.168.2.10"    # 与 config.yaml 中的 IP 保持一致
+```
+
 **获取 API 密钥**: [智谱开放平台](https://open.bigmodel.cn/)
 
-### 5️⃣ 连接手机
+### 5️⃣ 手机设置
+
+#### 步骤 1：配置 ADB 无线调试（用于投屏）
 
 **方法1：无线调试（Android 11+ 推荐）**
 
-1. 手机进入：设置 → 开发者选项 → 无线调试
+1. 手机进入：设置 →开发者选项 → 无线调试
 2. 点击"使用配对码配对设备"
 3. 在电脑执行：
    ```bash
@@ -236,6 +260,34 @@ adb devices
 # 应该显示: <IP>:<端口>  device
 ```
 
+#### 步骤 2：安装并配置 Accessibility Service
+
+**B模式控制依赖 Accessibility Service 应用**，该应用提供 HTTP 接口（端口 8080）用于：
+- 截图获取
+- 点击操作
+- 滑动操作
+- 文本输入（支持中文）
+- 应用启动
+
+**安装步骤：**
+
+1. **安装 APK**（获取应用安装包）
+2. **授予无障碍权限**：
+   - 设置 → 无障碍 → 找到应用 → 开启服务
+3. **启动服务**：
+   - 打开应用
+   - 确认服务在端口 8080 运行
+4. **验证连接**：
+   ```bash
+   curl "http://<手机IP>:8080/screenshot"
+   # 应该返回截图数据
+   ```
+
+**配置要点：**
+- 确保手机和电脑在同一局域网
+- 关闭手机省电模式（避免服务被杀）
+- 在电池优化中将应用设为"不优化"
+
 ### 6️⃣ 启动服务
 
 ```bash
@@ -247,8 +299,10 @@ python web_server.py
 [autoglm-ui] [INFO] ======================================
 [autoglm-ui] [INFO] AutoGLM Cockpit Web 服务器启动
 [autoglm-ui] [INFO] 访问地址: http://localhost:5000
-[autoglm-ui] [INFO] 设备: 192.168.2.13:34333
+[autoglm-ui] [INFO] 设备: 192.168.2.10:35405
 [autoglm-ui] [INFO] ======================================
+[AutoGLMAgent] 使用 Accessibility 方法连接设备
+[AutoGLMAgent] 初始化成功，设备: 192.168.2.10:35405
 ```
 
 ### 7️⃣ 打开浏览器
@@ -445,7 +499,27 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 
 ## 🐛 常见问题
 
-### Q1: 投屏黑屏或无画面？
+### Q1: Accessibility Service 连接失败？
+
+**错误信息**：`Connection timeout to <IP>:8080`
+
+**解决方案**：
+1. 确认 Accessibility Service 应用已启动
+2. 检查无障碍权限是否开启
+3. 确保手机和电脑在同一局域网
+4. 关闭手机防火墙
+5. 测试连接：`curl "http://<IP>:8080/screenshot"`
+6. 重启 Accessibility Service 应用
+
+### Q2: 文本输入失败或乱码？
+
+**解决方案**：
+1. 确认使用的是 Accessibility 方法（非 ADB 键盘）
+2. 检查 Accessibility Service 版本
+3. 确保输入法支持中文
+4. 重启 Accessibility 服务
+
+### Q3: 投屏黑屏或无画面？
 
 **解决方案**：
 1. 检查 ADB 连接：`adb devices`
@@ -453,7 +527,7 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 3. 重启投屏服务
 4. 检查防火墙设置
 
-### Q2: AutoGLM 响应很慢？
+### Q4: AutoGLM 响应很慢？
 
 **原因**：网络访问 GLM API 超时
 
@@ -462,7 +536,7 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 2. 检查 API 密钥有效性
 3. 使用本地模型（高级）
 
-### Q3: ADB 连接不稳定？
+### Q5: ADB 连接不稳定？
 
 **解决方案**：
 1. 确保手机和电脑在同一局域网
@@ -470,7 +544,7 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 3. 使用 USB 连接代替无线
 4. 重启 ADB 服务：`adb kill-server && adb start-server`
 
-### Q4: WebSocket 连接失败？
+### Q6: WebSocket 连接失败？
 
 **解决方案**：
 1. 检查端口 5000 是否被占用
@@ -481,6 +555,28 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 ---
 
 ## 🔄 更新日志
+
+### v1.1.0 (2026-02-11)
+
+**重大更新**
+
+✨ **新功能**
+- 🔄 切换到 Accessibility Service 方法进行手机控制
+- ⌨️ 支持中文文本输入（无需 ADB 键盘）
+- 📊 B模式执行过程实时流式显示
+- 🎨 右侧下半部分左右分栏布局：摘要 + 详细日志
+
+🎨 **优化**
+- 改进 IP 地址解析逻辑（自动去除端口号）
+- 优化日志输出格式和高亮显示
+- 更稳定的 HTTP 控制接口
+- 终端风格的详细日志区域
+
+🐛 **修复**
+- 修复 device_id 格式导致的连接错误
+- 修复默认 IP 地址硬编码问题
+- 解决文本输入功能不可用问题
+- 优化流式输出的缓冲机制
 
 ### v1.0.0 (2026-02-09)
 
