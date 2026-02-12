@@ -13,11 +13,58 @@
         <div class="left-panel">
             <div class="panel-header">
                 <h2>📱 手机投屏</h2>
-                <div class="connection-status">
-                    <span id="adb-status" class="status-dot offline"></span>
-                    <span id="device-info">未连接</span>
+                <div class="header-controls">
+                    <div class="connection-status">
+                        <span id="adb-status" class="status-dot offline"></span>
+                        <span id="device-info">未连接</span>
+                    </div>
+                    <button id="toggle-adb-btn" class="btn-text">收起设置</button>
                 </div>
             </div>
+            
+            <!-- ADB 连接控制面板 -->
+            <div class="adb-control-panel">
+                <div class="adb-tabs">
+                    <button id="tab-pair" class="adb-tab active">配对设备</button>
+                    <button id="tab-connect" class="adb-tab">快速连接</button>
+                </div>
+                
+                <!-- 配对面板 -->
+                <div id="panel-pair" class="adb-panel active">
+                    <div class="adb-hint">
+                        <p>📱 <strong>手机操作：</strong></p>
+                        <p>1. 设置 > 开发者选项 > 无线调试</p>
+                        <p>2. 点击 "使用配对码配对设备"</p>
+                        <p>3. 输入下方显示的配对信息</p>
+                    </div>
+                    <div class="adb-form">
+                        <input type="text" id="pairing-ip" placeholder="设备 IP 地址 (如: 192.168.1.100)" />
+                        <input type="text" id="pairing-port" placeholder="配对端口 (如: 37273)" />
+                        <input type="text" id="pairing-code" placeholder="配对码 (6位数字)" maxlength="6" />
+                        <button id="btn-pair" class="btn-action">🔗 开始配对</button>
+                    </div>
+                </div>
+                
+                <!-- 快速连接面板 -->
+                <div id="panel-connect" class="adb-panel">
+                    <div class="adb-hint">
+                        <p>⚡ <strong>已配对过的设备可直接连接</strong></p>
+                    </div>
+                    <div class="adb-form">
+                        <input type="text" id="connect-ip" placeholder="设备 IP 地址 (如: 192.168.1.100)" />
+                        <input type="text" id="connect-port" placeholder="端口 (默认: 5555)" value="5555" />
+                        <button id="btn-connect" class="btn-action">⚡ 快速连接</button>
+                    </div>
+                </div>
+                
+                <div class="adb-actions">
+                    <button id="btn-disconnect" class="btn-secondary">❌ 断开连接</button>
+                    <button id="btn-devices" class="btn-secondary">📋 查看设备</button>
+                </div>
+                
+                <div id="adb-output" class="adb-output"></div>
+            </div>
+            
             <div class="phone-screen">
                 <img id="screen-image" src="" alt="等待投屏..." />
                 <div id="screen-placeholder" class="placeholder">

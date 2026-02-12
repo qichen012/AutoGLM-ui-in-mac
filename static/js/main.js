@@ -17,6 +17,19 @@ const rightPanel = document.querySelector('.right-panel');
 const autoglmProcess = document.getElementById('autoglm-process');
 const processContent = document.getElementById('process-content');
 
+// ADB 控制元素
+const adbControlPanel = document.querySelector('.adb-control-panel');
+const toggleAdbBtn = document.getElementById('toggle-adb-btn');
+const tabPair = document.getElementById('tab-pair');
+const tabConnect = document.getElementById('tab-connect');
+const panelPair = document.getElementById('panel-pair');
+const panelConnect = document.getElementById('panel-connect');
+const btnPair = document.getElementById('btn-pair');
+const btnConnect = document.getElementById('btn-connect');
+const btnDisconnect = document.getElementById('btn-disconnect');
+const btnDevices = document.getElementById('btn-devices');
+const adbOutput = document.getElementById('adb-output');
+
 // 连接事件
 socket.on('connect', () => {
     console.log('已连接到服务器');
@@ -177,6 +190,12 @@ startScrcpyBtn.addEventListener('click', () => {
 
 socket.on('scrcpy_started', () => {
     screenPlaceholder.style.display = 'none';
+    
+    // 投屏启动后收起设置面板
+    if (adbControlPanel) {
+        adbControlPanel.style.display = 'none';
+        if (toggleAdbBtn) toggleAdbBtn.textContent = '展开设置';
+    }
 });
 
 socket.on('screen_frame', (data) => {
@@ -377,3 +396,189 @@ function updateLogLineStyle(logLine) {
 // 初始化
 addSystemMessage('👋 欢迎使用 AutoGLM Cockpit');
 addSystemMessage('💡 提示：A 模式用于普通对话，B 模式用于控制手机');
+
+// 切换ADB面板显示/隐藏
+if (toggleAdbBtn) {
+    toggleAdbBtn.addEventListener('click', () => {
+        if (adbControlPanel.style.display === 'none') {
+            adbControlPanel.style.display = 'block';
+            toggleAdbBtn.textContent = '收起设置';
+        } else {
+            adbControlPanel.style.display = 'none';
+            toggleAdbBtn.textContent = '展开设置';
+        }
+    });
+}
+
+// ========== ADB 控制功能 ==========
+
+// 标签页切换
+tabPair.addEventListener('click', () => {
+    tabPair.classList.add('active');
+    tabConnect.classList.remove('active');
+    panelPair.classList.add('active');
+    panelConnect.classList.remove('active');
+});
+
+tabConnect.addEventListener('click', () => {
+    tabConnect.classList.add('active');
+    tabPair.classList.remove('active');
+    panelConnect.classList.add('active');
+    panelPair.classList.remove('active');
+});
+
+// 配对设备
+btnPair.addEventListener('click', () => {
+    const pairingIp = document.getElementById('pairing-ip').value.trim();
+    const pairingPort = document.getElementById('pairing-port').value.trim();
+    const pairingCode = document.getElementById('pairing-code').value.trim();
+    
+    if (!pairingIp || !pairingPort || !pairingCode) {
+        showAdbOutput('❌ 请填写完整的配对信息', 'error');
+        return;
+    }
+    
+    if (pairingCode.length !== 6 || !/^\d+$/.test(pairingCode)) {
+        showAdbOutput('❌ 配对码必须是6位数字', 'error');
+        return;
+    }
+    
+    btnPair.disabled = true;
+    btnPair.textContent = '配对中...';
+    showAdbOutput('🔄 正在配对设备...', 'info');
+    
+    socket.emit('adb_pair', {
+        pairing_ip: pairingIp,
+        pairing_port: pairingPort,
+        pairing_code: pairingCode
+    });
+});
+
+// 快速连接
+btnConnect.addEventListener('click', () => {
+    const connectIp = document.getElementById('connect-ip').value.trim();
+    const connectPort = document.getElementById('connect-port').value.trim() || '5555';
+    
+    if (!connectIp) {
+        showAdbOutput('❌ 请输入设备 IP 地址', 'error');
+        return;
+    }
+    
+    btnConnect.disabled = true;
+    btnConnect.textContent = '连接中...';
+    showAdbOutput('🔄 正在连接设备...', 'info');
+    
+    socket.emit('adb_connect_wireless', {
+        ip: connectIp,
+        port: connectPort
+    });
+});
+
+// 断开连接
+btnDisconnect.addEventListener('click', () => {
+    socket.emit('adb_disconnect');
+    showAdbOutput('🔄 正在断开连接...', 'info');
+});
+
+// 查看设备
+btnDevices.addEventListener('click', () => {
+    socket.emit('adb_get_devices');
+    showAdbOutput('🔄 正在查询设备列表...', 'info');
+});
+
+// 接收配对结果
+socket.on('adb_pair_result', (data) => {
+    btnPair.disabled = false;
+    btnPair.textContent = '🔗 开始配对';
+    
+    if (data.success) {
+        showAdbOutput('✅ ' + data.message, 'success');
+        if (data.output) {
+            showAdbOutput(data.output, 'detail');
+        }
+        
+        // 配对成功后自动切换到连接标签
+        const pairingIp = document.getElementById('pairing-ip').value.trim();
+        document.getElementById('connect-ip').value = pairingIp;
+        
+        setTimeout(() => {
+            tabConnect.click();
+            showAdbOutput('💡 配对成功！现在可以点击"快速连接"', 'info');
+        }, 1000);
+    } else {
+        showAdbOutput('❌ ' + data.message, 'error');
+        if (data.output) {
+            showAdbOutput(data.output, 'detail');
+        }
+    }
+});
+
+// 接收连接结果
+socket.on('adb_connect_result', (data) => {
+    btnConnect.disabled = false;
+    btnConnect.textContent = '⚡ 快速连接';
+    
+    if (data.success) {
+        showAdbOutput('✅ ' + data.message, 'success');
+        adbStatus.className = 'status-dot online';
+        deviceInfo.textContent = data.device;
+        
+        if (data.output) {
+            showAdbOutput(data.output, 'detail');
+        }
+        
+        // 连接成功后提示可以启动投屏
+        addSystemMessage('✅ ADB 连接成功！现在可以启动投屏');
+        
+        // 自动收起面板
+        setTimeout(() => {
+            if (adbControlPanel && adbControlPanel.style.display !== 'none') {
+                adbControlPanel.style.display = 'none';
+                if (toggleAdbBtn) toggleAdbBtn.textContent = '展开设置';
+            }
+        }, 1500);
+    } else {
+        showAdbOutput('❌ ' + data.message, 'error');
+        adbStatus.className = 'status-dot offline';
+        deviceInfo.textContent = '未连接';
+        
+        if (data.output) {
+            showAdbOutput(data.output, 'detail');
+        }
+    }
+});
+
+// 接收断开连接结果
+socket.on('adb_disconnect_result', (data) => {
+    if (data.success) {
+        showAdbOutput('✅ ' + data.message, 'success');
+        adbStatus.className = 'status-dot offline';
+        deviceInfo.textContent = '未连接';
+    } else {
+        showAdbOutput('❌ ' + data.message, 'error');
+    }
+});
+
+// 接收设备列表
+socket.on('adb_devices_list', (data) => {
+    if (data.success) {
+        showAdbOutput('📋 已连接设备：\n' + data.output, 'detail');
+    } else {
+        showAdbOutput('❌ ' + data.message, 'error');
+    }
+});
+
+// 显示 ADB 输出
+function showAdbOutput(message, type = 'info') {
+    const outputDiv = document.createElement('div');
+    outputDiv.className = `adb-message ${type}`;
+    outputDiv.textContent = message;
+    
+    adbOutput.appendChild(outputDiv);
+    adbOutput.scrollTop = adbOutput.scrollHeight;
+    
+    // 限制输出条数，避免过多
+    while (adbOutput.children.length > 20) {
+        adbOutput.removeChild(adbOutput.firstChild);
+    }
+}

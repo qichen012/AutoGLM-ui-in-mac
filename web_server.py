@@ -313,6 +313,178 @@ def handle_adb_connect():
             emit('adb_status', {'connected': False, 'message': 'ADB 连接失败'})
 
 
+@socketio.on('adb_pair')
+def handle_adb_pair(data):
+    """无线 ADB 配对"""
+    pairing_ip = data.get('pairing_ip', '').strip()
+    pairing_port = data.get('pairing_port', '').strip()
+    pairing_code = data.get('pairing_code', '').strip()
+    
+    if not all([pairing_ip, pairing_port, pairing_code]):
+        emit('adb_pair_result', {
+            'success': False,
+            'message': '配对信息不完整'
+        })
+        return
+    
+    try:
+        import subprocess
+        pair_address = f"{pairing_ip}:{pairing_port}"
+        
+        logger.info(f"开始配对: {pair_address}")
+        
+        # 执行配对命令
+        process = subprocess.Popen(
+            ["adb", "pair", pair_address],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+        
+        # 发送配对码
+        output, _ = process.communicate(input=pairing_code + "\n", timeout=30)
+        
+        logger.info(f"配对输出: {output}")
+        
+        if "Successfully paired" in output or "成功" in output:
+            emit('adb_pair_result', {
+                'success': True,
+                'message': '配对成功！',
+                'output': output
+            })
+        else:
+            emit('adb_pair_result', {
+                'success': False,
+                'message': '配对失败',
+                'output': output
+            })
+    except subprocess.TimeoutExpired:
+        emit('adb_pair_result', {
+            'success': False,
+            'message': '配对超时'
+        })
+    except Exception as e:
+        logger.error(f"配对错误: {e}")
+        emit('adb_pair_result', {
+            'success': False,
+            'message': f'配对失败: {str(e)}'
+        })
+
+
+@socketio.on('adb_connect_wireless')
+def handle_adb_connect_wireless(data):
+    """无线连接 ADB"""
+    ip = data.get('ip', '').strip()
+    port = data.get('port', '5555').strip()
+    
+    if not ip:
+        emit('adb_connect_result', {
+            'success': False,
+            'message': 'IP地址不能为空'
+        })
+        return
+    
+    try:
+        import subprocess
+        address = f"{ip}:{port}"
+        
+        logger.info(f"开始连接: {address}")
+        
+        result = subprocess.run(
+            ["adb", "connect", address],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        output = result.stdout + result.stderr
+        logger.info(f"连接输出: {output}")
+        
+        if "connected" in output.lower():
+            # 更新全局 adb_manager
+            global adb_manager
+            adb_manager = ADBManager(device_id=address)
+            
+            # 更新设备信息到配置
+            if not config.get('device'):
+                config['device'] = {}
+            config['device']['ip'] = ip
+            config['device']['adb_port'] = int(port)
+            
+            emit('adb_connect_result', {
+                'success': True,
+                'message': '连接成功！',
+                'device': address,
+                'output': output
+            })
+        else:
+            emit('adb_connect_result', {
+                'success': False,
+                'message': '连接失败',
+                'output': output
+            })
+    except subprocess.TimeoutExpired:
+        emit('adb_connect_result', {
+            'success': False,
+            'message': '连接超时'
+        })
+    except Exception as e:
+        logger.error(f"连接错误: {e}")
+        emit('adb_connect_result', {
+            'success': False,
+            'message': f'连接失败: {str(e)}'
+        })
+
+
+@socketio.on('adb_disconnect')
+def handle_adb_disconnect():
+    """断开 ADB 连接"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["adb", "disconnect"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        emit('adb_disconnect_result', {
+            'success': True,
+            'message': '已断开所有连接'
+        })
+    except Exception as e:
+        logger.error(f"断开连接错误: {e}")
+        emit('adb_disconnect_result', {
+            'success': False,
+            'message': f'断开失败: {str(e)}'
+        })
+
+
+@socketio.on('adb_get_devices')
+def handle_adb_get_devices():
+    """获取已连接的设备列表"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["adb", "devices", "-l"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        emit('adb_devices_list', {
+            'success': True,
+            'output': result.stdout
+        })
+    except Exception as e:
+        logger.error(f"获取设备列表错误: {e}")
+        emit('adb_devices_list', {
+            'success': False,
+            'message': f'获取失败: {str(e)}'
+        })
+
+
 def main():
     """启动服务器"""
     init_services()
