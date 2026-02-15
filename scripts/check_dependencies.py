@@ -149,7 +149,7 @@ def print_installation_guide():
     print("   brew install android-platform-tools")
     
     print("\n3️⃣ 验证安装:")
-    print("   python check_dependencies.py")
+    print("   python scripts/check_dependencies.py")
 
 
 def main():

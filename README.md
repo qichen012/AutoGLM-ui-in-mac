@@ -453,7 +453,15 @@ autoglm-ui/
 ├── config.yaml                # 配置文件
 ├── requirements.txt           # Python 依赖
 ├── README.md                  # 本文档
-├── PROJECT_STRUCTURE.md       # 详细结构文档
+│
+├── scripts/                   # 脚本工具
+│   ├── adb_pair_correct.py   # ADB 配对脚本
+│   └── check_dependencies.py # 依赖检查脚本
+│
+├── docs/                      # 项目文档
+│   ├── PROJECT_STRUCTURE.md  # 详细结构文档
+│   ├── ADB_PAIRING_GUIDE.md  # ADB 配对指南
+│   └── WEB_README.md         # Web 版使用说明
 │
 ├── templates/                 # HTML 模板
 │   └── index.html            # 主页面

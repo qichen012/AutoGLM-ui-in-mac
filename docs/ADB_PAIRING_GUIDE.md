@@ -5,7 +5,7 @@
 ### 使用脚本（推荐）
 
 ```bash
-python adb_pair_correct.py
+python scripts/adb_pair_correct.py
 ```
 
 选择"1"进行配对，按照提示操作即可。
@@ -45,7 +45,7 @@ adb devices
 ### 已配对过，想快速重连？
 
 ```bash
-python adb_pair_correct.py
+python scripts/adb_pair_correct.py
 ```
 
 选择"2"快速连接模式。

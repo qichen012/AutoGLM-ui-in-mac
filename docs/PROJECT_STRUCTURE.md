@@ -7,6 +7,14 @@
 - **config.yaml** - 项目配置（设备 IP、API 密钥等）
 - **requirements.txt** - Python 依赖列表
 - **README.md** - 项目说明
+
+### scripts/ - 脚本工具
+- **adb_pair_correct.py** - ADB 无线配对脚本
+- **check_dependencies.py** - 依赖环境检查脚本
+
+### docs/ - 项目文档
+- **PROJECT_STRUCTURE.md** - 本文档（详细结构说明）
+- **ADB_PAIRING_GUIDE.md** - ADB 无线配对使用指南
 - **WEB_README.md** - Web 版详细使用说明
 
 ### templates/ - Web 前端模板
