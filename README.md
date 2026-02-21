@@ -284,22 +284,53 @@ adb devices
 
 **安装步骤：**
 
-1. **安装 APK**（获取应用安装包）
+1. **安装 APK**
+   
+   项目已包含预编译的 APK：`app_in_android/app-debug.apk`
+   
+   **方式1：通过 ADB 安装（推荐）**
+   ```bash
+   # 确保手机已通过 USB 或无线连接
+   adb devices
+   
+   # 安装应用
+   adb install app_in_android/app-debug.apk
+   
+   # 如果提示已安装，使用 -r 参数重新安装
+   adb install -r app_in_android/app-debug.apk
+   ```
+   
+   **方式2：手动安装**
+   - 将 `app_in_android/app-debug.apk` 传输到手机
+   - 在手机上点击安装（需开启"允许安装未知来源应用"）
+
 2. **授予无障碍权限**：
-   - 设置 → 无障碍 → 找到应用 → 开启服务
+   - 设置 → 无障碍 → 找到 "AutoGLM Accessibility Service" → 开启服务
+   - 授予所有请求的权限
+
 3. **启动服务**：
-   - 打开应用
-   - 确认服务在端口 8080 运行
+   - 打开应用（应用名称：AutoGLM Service）
+   - 点击 "启动服务" 按钮
+   - 确认服务状态显示 "运行中 (端口 8080)"
+
 4. **验证连接**：
    ```bash
+   # 替换 <手机IP> 为你的实际 IP 地址
    curl "http://<手机IP>:8080/screenshot"
-   # 应该返回截图数据
+   # 应该返回截图数据（base64 编码的图片）
+   
+   # 或者在浏览器访问测试页面
+   # http://<手机IP>:8080/status
    ```
 
 **配置要点：**
-- 确保手机和电脑在同一局域网
-- 关闭手机省电模式（避免服务被杀）
-- 在电池优化中将应用设为"不优化"
+- 📱 **应用名称**：AutoGLM Service / AutoGLM 无障碍服务
+- 📦 **APK 位置**：`app_in_android/app-debug.apk`（项目自带）
+- 🔌 **服务端口**：8080（HTTP 接口）
+- 🌐 确保手机和电脑在同一局域网
+- ⚡ 关闭手机省电模式（避免服务被杀后台）
+- 🔋 在电池优化中将应用设为"不优化"
+- 🔒 授予所有无障碍权限和悬浮窗权限
 
 ### 6️⃣ 启动服务
 
@@ -465,6 +496,9 @@ autoglm-ui/
 │   ├── ADB_PAIRING_GUIDE.md  # ADB 配对指南
 │   └── WEB_README.md         # Web 版使用说明
 │
+├── app_in_android/            # Android 应用
+│   └── app-debug.apk         # AutoGLM Accessibility Service APK
+│
 ├── templates/                 # HTML 模板
 │   └── index.html            # 主页面
 │
@@ -558,6 +592,37 @@ os.environ["HTTPS_PROXY"] = "http://proxy:port"
 ---
 
 ## 🐛 常见问题
+
+### Q0: 在哪里获取 Accessibility Service APK？
+
+**答案**：项目已自带 APK 文件！
+
+**APK 位置**：
+```bash
+app_in_android/app-debug.apk
+```
+
+**快速安装**：
+```bash
+# 方法1：通过 ADB 安装（最简单）
+adb install app_in_android/app-debug.apk
+
+# 方法2：手动安装
+# 1. 将 app-debug.apk 传输到手机（如微信/QQ 发送给自己）
+# 2. 在手机上点击 apk 文件安装
+# 3. 如果提示“未知来源”，需在设置中允许安装
+```
+
+**应用信息**：
+- 📱 应用名称：AutoGLM Service
+- 🔌 服务端口：8080
+- 🔒 需要权限：无障碍权限 + 悬浮窗权限
+- ⚡ 功能：接收 HTTP 指令，控制手机操作
+
+**安装后记得**：
+1. 在 设置 → 无障碍 中开启服务
+2. 打开应用，点击 "启动服务"
+3. 确认显示 "运行中 (端口 8080)"
 
 ### Q1: Accessibility Service 连接失败？
 

@@ -284,22 +284,53 @@ adb devices
 
 **Installation Steps:**
 
-1. **Install APK** (Get app installation package)
+1. **Install APK**
+   
+   The project includes a pre-built APK: `app_in_android/app-debug.apk`
+   
+   **Method 1: Install via ADB (Recommended)**
+   ```bash
+   # Ensure phone is connected via USB or wireless
+   adb devices
+   
+   # Install the app
+   adb install app_in_android/app-debug.apk
+   
+   # If already installed, use -r to reinstall
+   adb install -r app_in_android/app-debug.apk
+   ```
+   
+   **Method 2: Manual Installation**
+   - Transfer `app_in_android/app-debug.apk` to your phone
+   - Tap to install on phone (Enable "Install from Unknown Sources" if needed)
+
 2. **Grant Accessibility Permission**:
-   - Settings → Accessibility → Find App → Enable Service
+   - Settings → Accessibility → Find "AutoGLM Accessibility Service" → Enable Service
+   - Grant all requested permissions
+
 3. **Start Service**:
-   - Open App
-   - Confirm service running on port 8080
+   - Open the app (App Name: AutoGLM Service)
+   - Tap "Start Service" button
+   - Confirm service status shows "Running (Port 8080)"
+
 4. **Verify Connection**:
    ```bash
+   # Replace <Phone IP> with your actual IP address
    curl "http://<Phone IP>:8080/screenshot"
-   # Should return screenshot data
+   # Should return screenshot data (base64 encoded image)
+   
+   # Or visit test page in browser
+   # http://<Phone IP>:8080/status
    ```
 
-** Configuration Points:**
-- Ensure phone and computer are on the same LAN
-- Turn off phone battery saver mode (Avoid service being killed)
-- Set app to "Don't optimize" in battery optimization
+**Configuration Points:**
+- 📱 **App Name**: AutoGLM Service / AutoGLM Accessibility Service
+- 📦 **APK Location**: `app_in_android/app-debug.apk` (Included in project)
+- 🔌 **Service Port**: 8080 (HTTP Interface)
+- 🌐 Ensure phone and computer are on the same LAN
+- ⚡ Turn off phone battery saver mode (Prevent service from being killed)
+- 🔋 Set app to "Don't optimize" in battery optimization settings
+- 🔒 Grant all accessibility permissions and overlay permissions
 
 ### 6️⃣ Start Service
 
@@ -465,6 +496,9 @@ autoglm-ui/
 │   ├── ADB_PAIRING_GUIDE.md  # ADB Pairing Guide
 │   └── WEB_README.md         # Web Version Guide
 │
+├── app_in_android/            # Android App
+│   └── app-debug.apk         # AutoGLM Accessibility Service APK
+│
 ├── templates/                 # HTML Templates
 │   └── index.html            # Main Page
 │
@@ -558,6 +592,37 @@ Edit `utils/logger.py` to adjust log detail level.
 ---
 
 ## 🐛 FAQ
+
+### Q0: Where to get the Accessibility Service APK?
+
+**Answer**: The project includes the APK file!
+
+**APK Location**:
+```bash
+app_in_android/app-debug.apk
+```
+
+**Quick Installation**:
+```bash
+# Method 1: Install via ADB (Easiest)
+adb install app_in_android/app-debug.apk
+
+# Method 2: Manual Installation
+# 1. Transfer app-debug.apk to phone (e.g., via WeChat/Email)
+# 2. Tap the apk file on phone to install
+# 3. If prompted "Unknown sources", allow installation in settings
+```
+
+**App Information**:
+- 📱 App Name: AutoGLM Service
+- 🔌 Service Port: 8080
+- 🔒 Required Permissions: Accessibility + Overlay
+- ⚡ Function: Receive HTTP commands, control phone operations
+
+**After Installation Remember**:
+1. Enable service in Settings → Accessibility
+2. Open app, tap "Start Service"
+3. Confirm status shows "Running (Port 8080)"
 
 ### Q1: Accessibility Service connection failed?
 
